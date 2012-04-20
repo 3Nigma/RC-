@@ -2,6 +2,14 @@
 
 RemRep::RemRep(const std::string &lports) : Replyer("self"), mListenPorts(lports) {
   mRMpool.push_back(this);
+
+  addGetFilter(std::tuple<std::string, std::function<void(RequestInfo &)>>{"", [&](RequestInfo &ri) {
+    cJSON *root = echoIndex();
+    mg_printf(ri.getClientStructure(), "HTTP/1.1 200 OK\r\n"
+              "Content-Type: text/plain\r\n\r\n"
+              "%s", cJSON_Print(root));
+    cJSON_Delete(root);
+  }});
 }
 
 RemRep::~RemRep() {
@@ -19,7 +27,7 @@ void RemRep::StopRepServer() {
   mg_stop(mCtx);
 }
   
-bool RemRep::handlePostRequest(const RequestInfo &ri) {
+/*bool RemRep::handlePostRequest(const RequestInfo &ri) {
   std::string processedUri = ri.getCompleteUri();
 
     /*if(processedUri == "/") processedUri = "/self";
@@ -51,27 +59,10 @@ bool RemRep::handlePostRequest(const RequestInfo &ri) {
 
       } else
         return false;
-    }*/
+    }
 
   return true;
-}
-
-bool RemRep::handleGetRequest(RequestInfo &ri) {
-  std::string processedUri = ri.getCompleteUri();
-
-  if(processedUri == "/") processedUri = "/self";
-  processedUri = processedUri.substr(1);  // go pass the '/' character
-
-  if(processedUri.find(this->mName) == 0) {
-    cJSON *root = echoIndex();
-    mg_printf(ri.getClientStructure(), "HTTP/1.1 200 OK\r\n"
-              "Content-Type: text/plain\r\n\r\n"
-              "%s", cJSON_Print(root));
-    cJSON_Delete(root);
-  }
-  
-  return true;
-}
+}*/
 
 cJSON *RemRep::echoIndexHook() {
   return nullptr;
@@ -107,9 +98,14 @@ struct mg_request_info {
   case MG_NEW_REQUEST:  // New HTTP request has arrived from the client
     std::cout << "Client [" << ri.getClientFormattedIp() << ":" << ri.getClientPort() << "] request inbound : " 
               << requestType << " " << ri.getCompleteUri() << std::endl;
-    if(requestType == "GET")
-      repo->handleGetRequest(ri);
-    else if(requestType == "POST")
+    if(requestType == "GET") {
+      if(repo->handleGetRequest(ri) == false) {
+        // there was an error in the request
+        std::cout << " * Invalid request ... routing to index." << std::endl;
+        mg_printf(ri.getClientStructure(), "HTTP/1.1 301 Moved Permanently\r\n"
+                                           "Location: /\r\n");
+      }
+    } else if(requestType == "POST")
       repo->handlePostRequest(ri);
     return (void *)"";  // Mark as processed
     break;

@@ -2,6 +2,8 @@
 #define _REMREP_HPP_
 
 #include <iostream>
+#include <functional>
+#include <tuple>
 #include <list>
 #include "mongoose/mongoose.h"
 #include "replyer.hpp"
@@ -13,9 +15,6 @@ public:
 
   void StartRepServer();
   void StopRepServer();
-  
-  bool handlePostRequest(const RequestInfo &ri);
-  virtual bool handleGetRequest(RequestInfo &ri);
 
 protected:
   std::list<Replyer *> mRMpool;
