@@ -4,18 +4,17 @@ RemRep::RemRep(const std::string &lports) : Replyer("self"), mListenPorts(lports
   mRMpool.push_back(this);
 
   // add index filter
-  addGetFilter(std::tuple<std::string, std::function<void(RequestInfo &, const std::string &)>>
-               {"", [&](RequestInfo &ri, const std::string &procUri) {
+  addGetFilter(std::tuple<std::string, std::function<cJSON *(RequestInfo &, const std::string &)>>
+               {"", [&](RequestInfo &ri, const std::string &procUri) -> cJSON* {
     cJSON *root = echoIndex();
-    mg_printf(ri.getClientStructure(), "HTTP/1.1 200 OK\r\n"
-              "Content-Type: text/plain\r\n\r\n"
-              "%s", cJSON_Print(root));
-    cJSON_Delete(root);
+
+    return root;
   }});
 
   // add register filter
-  addPostFilter(std::tuple<std::string, std::function<void(RequestInfo &, const std::string &)>>
-                {"register", [&](RequestInfo &ri, const std::string &procUri) {
+  addPostFilter(std::tuple<std::string, std::function<cJSON *(RequestInfo &, const std::string &)>>
+                {"register", [&](RequestInfo &ri, const std::string &procUri) -> cJSON* {
+    cJSON *root = nullptr;
     std::string localUri = procUri;
     if(localUri[0] == '/') localUri = localUri.substr(1);
     size_t delimPos = localUri.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_");
@@ -28,6 +27,8 @@ RemRep::RemRep(const std::string &lports) : Replyer("self"), mListenPorts(lports
               "%s", ri.getCompleteUri());//cJSON_Print(root));
     //cJSON_Delete(root);
     mRMpool.push_back(newros);
+
+    return root;
   }});
 }
 
@@ -127,14 +128,14 @@ struct mg_request_info {
     std::cout << "Client [" << ri.getClientFormattedIp() << ":" << ri.getClientPort() << "] request inbound : " 
               << requestType << " " << ri.getCompleteUri() << std::endl;
     if(requestType == "GET") {
-      if(repo->handleGetRequest(ri) == false) {
-        // there was an error in the request
-        std::cout << " * Invalid request ... routing to index." << std::endl;
-        mg_printf(ri.getClientStructure(), "HTTP/1.1 301 Moved Permanently\r\n"
-                                           "Location: /\r\n");
-      }
+      root = repo->handleGetRequest(ri);
     } else if(requestType == "POST")
-      repo->handlePostRequest(ri);
+      root = repo->handlePostRequest(ri);
+
+    mg_printf(ri.getClientStructure(), "HTTP/1.1 200 OK\r\n"
+              "Content-Type: text/plain\r\n\r\n"
+              "%s", cJSON_Print(root));
+
     return (void *)"";  // Mark as processed
     break;
   case MG_HTTP_ERROR:  // HTTP error must be returned to the client

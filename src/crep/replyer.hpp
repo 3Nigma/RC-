@@ -14,21 +14,22 @@ public:
   ~Replyer();
 
   std::string getName();
+  void addStatusMsg(cJSON **root, const std::string &content);
 
-  bool handleGetRequest(RequestInfo &ri);
-  bool handlePostRequest(RequestInfo &ri);
+  cJSON *handleGetRequest(RequestInfo &ri);
+  cJSON *handlePostRequest(RequestInfo &ri);
 
-  void addPostFilter(const std::tuple<std::string, std::function<void(RequestInfo &, const std::string &)> > &newpfil);
-  void addGetFilter(const std::tuple<std::string, std::function<void(RequestInfo &, const std::string &)> > &newgfil);
+  void addPostFilter(const std::tuple<std::string, std::function<cJSON *(RequestInfo &, const std::string &)> > &newpfil);
+  void addGetFilter(const std::tuple<std::string, std::function<cJSON *(RequestInfo &, const std::string &)> > &newgfil);
 protected:
   std::string mName;
-  std::list<std::tuple<std::string, std::function<void(RequestInfo &, const std::string &)>>> mGETFilters;
-  std::list<std::tuple<std::string, std::function<void(RequestInfo &, const std::string &)>>> mPOSTFilters;
+  std::list<std::tuple<std::string, std::function<cJSON *(RequestInfo &, const std::string &)>>> mGETFilters;
+  std::list<std::tuple<std::string, std::function<cJSON *(RequestInfo &, const std::string &)>>> mPOSTFilters;
   struct tm *mCreationTime;
 
   virtual cJSON *echoIndexHook();
   virtual cJSON *echoIndex();
-  bool handleRequest(RequestInfo &ri, std::list<std::tuple<std::string, std::function<void(RequestInfo &, const std::string &)>>> &fFilters);
+  cJSON *handleRequest(RequestInfo &ri, std::list<std::tuple<std::string, std::function<cJSON *(RequestInfo &, const std::string &)>>> &fFilters);
 };
 
 #endif
