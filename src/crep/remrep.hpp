@@ -2,11 +2,14 @@
 #define _REMREP_HPP_
 
 #include <iostream>
+#include <algorithm>
 #include <functional>
 #include <tuple>
 #include <list>
+#include <cstring>
 #include "mongoose/mongoose.h"
 #include "replyer.hpp"
+#include "remoteobjectserver.hpp"
 
 class RemRep : public Replyer {
 public:

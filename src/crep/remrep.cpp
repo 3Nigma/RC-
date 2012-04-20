@@ -3,12 +3,31 @@
 RemRep::RemRep(const std::string &lports) : Replyer("self"), mListenPorts(lports) {
   mRMpool.push_back(this);
 
-  addGetFilter(std::tuple<std::string, std::function<void(RequestInfo &)>>{"", [&](RequestInfo &ri) {
+  // add index filter
+  addGetFilter(std::tuple<std::string, std::function<void(RequestInfo &, const std::string &)>>
+               {"", [&](RequestInfo &ri, const std::string &procUri) {
     cJSON *root = echoIndex();
     mg_printf(ri.getClientStructure(), "HTTP/1.1 200 OK\r\n"
               "Content-Type: text/plain\r\n\r\n"
               "%s", cJSON_Print(root));
     cJSON_Delete(root);
+  }});
+
+  // add register filter
+  addPostFilter(std::tuple<std::string, std::function<void(RequestInfo &, const std::string &)>>
+                {"register", [&](RequestInfo &ri, const std::string &procUri) {
+    std::string localUri = procUri;
+    if(localUri[0] == '/') localUri = localUri.substr(1);
+    size_t delimPos = localUri.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_");
+    std::string objectName = (delimPos == std::string::npos ? localUri : localUri.substr(0, delimPos));
+
+    RemoteObjectServer *newros = new RemoteObjectServer(objectName, ri.getClientFormattedIp(), "-1");
+    //cJSON *root = echoIndex();
+    mg_printf(ri.getClientStructure(), "HTTP/1.1 200 OK\r\n"
+              "Content-Type: text/plain\r\n\r\n"
+              "%s", ri.getCompleteUri());//cJSON_Print(root));
+    //cJSON_Delete(root);
+    mRMpool.push_back(newros);
   }});
 }
 
@@ -65,7 +84,16 @@ void RemRep::StopRepServer() {
 }*/
 
 cJSON *RemRep::echoIndexHook() {
-  return nullptr;
+  cJSON *root = cJSON_CreateObject();
+  cJSON *objs = nullptr;
+
+  cJSON_AddNumberToObject(root, "objectcount", mRMpool.size());
+  cJSON_AddItemToObject(root, "objects", objs = cJSON_CreateArray()); 
+  std::for_each(mRMpool.begin(), mRMpool.end(), [&](Replyer *ros) {
+    cJSON_AddItemToArray(objs, cJSON_CreateString(ros->getName().c_str()));
+  });
+
+  return root;
 }
 
 void *RemRep::WebCallback(enum mg_event event, struct mg_connection *client, const struct mg_request_info *request_info) {
