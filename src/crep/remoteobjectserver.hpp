@@ -21,6 +21,8 @@ protected:
   unsigned int mPort;
   std::string mInterface;
   unsigned int mInReturnCount;
+
+  virtual cJSON *echoIndexHook();
 };
 
 #endif

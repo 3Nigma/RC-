@@ -2,6 +2,14 @@
 
 RemoteObjectServer::RemoteObjectServer(const std::string &name)
     : Replyer(name) {
+
+  // add interfce filter
+  addGetFilter(std::tuple<std::string, std::function<cJSON *(RequestInfo &)>>
+                {"interface", [&](RequestInfo &ri) -> cJSON* {
+    cJSON *root = echoInterface();
+
+    return root;
+  }});
 }
 
 void RemoteObjectServer::parseJString(const std::string &jstring) {
@@ -46,8 +54,17 @@ unsigned int RemoteObjectServer::getInterfaceReturnCnt() {
   return mInReturnCount;
 }
 
+cJSON *RemoteObjectServer::echoIndexHook() {
+  cJSON *root = cJSON_CreateObject();
+
+  cJSON_AddStringToObject(root, "ip", mIp.c_str());
+  cJSON_AddNumberToObject(root, "port", mPort);
+
+  return root;
+}
+
 cJSON *RemoteObjectServer::echoInterface() {
-  cJSON *root = nullptr;
+  cJSON *root = cJSON_CreateObject();
   //cJSON *in = nullptr;
 
   cJSON_AddStringToObject(root, "objectname", mName.c_str());
