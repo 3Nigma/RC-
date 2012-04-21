@@ -26,10 +26,26 @@ RemRep::RemRep(const std::string &lports) : Replyer("self"), mListenPorts(lports
   }});
 
   // add unregister filter
-  addPostFilter(std::tuple<std::string, std::function<cJSON *(RequestInfo &)>>
+  addGetFilter(std::tuple<std::string, std::function<cJSON *(RequestInfo &)>>
                 {"unregister", [&](RequestInfo &ri) -> cJSON* {
     cJSON *root = nullptr;
-    
+    bool objFound = false;
+
+    auto newListEnd = std::remove_if(mRMpool.begin(), mRMpool.end(), [&](Replyer *rCandidate) {
+      try {
+        if(rCandidate->getName() == ri.getRequestMethodArgument(0)) {
+          addStatusMsg(&root, "Unregistration succeded : Object is no further accounted for.");
+          objFound = true;
+          return true;
+        }
+      } catch(ArgumentIndexOutOfBounds) { 
+      }
+      return false;
+    });
+    mRMpool.erase(newListEnd, mRMpool.end());
+
+    if(!objFound)
+      addStatusMsg(&root, "Unregistration not carried out : Object not found.");
 
     return root;
   }});

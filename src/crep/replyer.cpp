@@ -52,7 +52,7 @@ cJSON *Replyer::handleRequest(RequestInfo &ri, std::list<std::tuple<std::string,
     if(std::get<0>(fCandidate) == methodName) {
       root = (std::get<1>(fCandidate))(ri);
 
-      if(cJSON_GetObjectItem(root, "statusmsg") == nullptr)
+      if(root == nullptr || cJSON_GetObjectItem(root, "statusmsg") == nullptr)
         addStatusMsg(&root, "All OK");
     }
   }
