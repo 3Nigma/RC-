@@ -14,7 +14,10 @@ RemRep::RemRep(const std::string &lports) : Replyer("self"), mListenPorts(lports
 
       mg_read(ri.getClientStructure(), requestBody, sizeof(requestBody));
       newros->parseJString(requestBody);
+      if(newros->getServerIp().empty())
+        newros->setServerIp(ri.getClientFormattedIp());
       mRMpool.push_back(newros);
+
       addStatusMsg(&root, "Registration succeded : Object indexed into service.");
     } catch(BadJSONFormatException) {
       addStatusMsg(&root, "Registration canceled : Unable to parse received data!");  

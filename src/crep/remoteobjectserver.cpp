@@ -12,6 +12,14 @@ RemoteObjectServer::RemoteObjectServer(const std::string &name)
   }});
 }
 
+std::string RemoteObjectServer::getServerIp() {
+  return mIp;
+}
+
+void RemoteObjectServer::setServerIp(const std::string &newip) {
+  mIp = newip;
+}
+
 void RemoteObjectServer::parseJString(const std::string &jstring) {
   cJSON *reqRoot = cJSON_Parse(jstring.c_str());
 
@@ -22,7 +30,7 @@ void RemoteObjectServer::parseJString(const std::string &jstring) {
       cJSON_Delete(reqRoot);
       throw BadJSONFormatException();
     } else
-      mIp = obj->valuestring;
+      setServerIp(obj->valuestring);
 
     if((obj = cJSON_GetObjectItem(reqRoot, "serverport")) == nullptr) {
       cJSON_Delete(reqRoot);
@@ -57,7 +65,7 @@ unsigned int RemoteObjectServer::getInterfaceReturnCnt() {
 cJSON *RemoteObjectServer::echoIndexHook() {
   cJSON *root = cJSON_CreateObject();
 
-  cJSON_AddStringToObject(root, "ip", mIp.c_str());
+  cJSON_AddStringToObject(root, "ip", getServerIp().c_str());
   cJSON_AddNumberToObject(root, "port", mPort);
 
   return root;

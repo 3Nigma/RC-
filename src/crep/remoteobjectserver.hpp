@@ -10,6 +10,9 @@ class RemoteObjectServer : public Replyer {
 public:
   RemoteObjectServer(const std::string &name);
   
+  std::string getServerIp();
+  void setServerIp(const std::string &newip);
+
   void parseJString(const std::string &jstring);
   void setInterface(const std::string &in);
   const std::string getInterface();
