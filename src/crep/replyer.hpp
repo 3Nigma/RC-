@@ -10,9 +10,11 @@
 
 class Replyer {
 public:
+  Replyer() = default;
   Replyer(const std::string &name);
   ~Replyer();
 
+  void setName(const std::string &name);
   std::string getName();
   void addStatusMsg(cJSON **root, const std::string &content);
 

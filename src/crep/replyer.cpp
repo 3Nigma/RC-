@@ -12,6 +12,10 @@ Replyer::~Replyer() {
   mGETFilters.clear();
 }
 
+void Replyer::setName(const std::string &name) {
+  mName = name;
+}
+
 std::string Replyer::getName() {
   return mName;
 }
@@ -64,7 +68,9 @@ cJSON *Replyer::handleRequest(RequestInfo &ri, std::list<std::tuple<std::string,
     for(std::tuple<std::string, std::function<cJSON *(RequestInfo &, const std::string &)>> fCandidate : fFilters)
       if(std::get<0>(fCandidate) == methodName) {
         root = (std::get<1>(fCandidate))(ri, processedUri);
-        addStatusMsg(&root, "All OK");
+
+        if(cJSON_GetObjectItem(root, "statusmsg") == nullptr)
+          addStatusMsg(&root, "All OK");
       }
 
     if(root == nullptr)

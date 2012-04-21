@@ -8,6 +8,7 @@
 #include <list>
 #include <cstring>
 #include "mongoose/mongoose.h"
+#include "exceptions.hpp"
 #include "replyer.hpp"
 #include "remoteobjectserver.hpp"
 

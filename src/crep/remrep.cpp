@@ -7,7 +7,7 @@ RemRep::RemRep(const std::string &lports) : Replyer("self"), mListenPorts(lports
   addGetFilter(std::tuple<std::string, std::function<cJSON *(RequestInfo &, const std::string &)>>
                {"", [&](RequestInfo &ri, const std::string &procUri) -> cJSON* {
     cJSON *root = echoIndex();
-
+    
     return root;
   }});
 
@@ -16,17 +16,20 @@ RemRep::RemRep(const std::string &lports) : Replyer("self"), mListenPorts(lports
                 {"register", [&](RequestInfo &ri, const std::string &procUri) -> cJSON* {
     cJSON *root = nullptr;
     std::string localUri = procUri;
+    char requestBody[32768];
     if(localUri[0] == '/') localUri = localUri.substr(1);
     size_t delimPos = localUri.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_");
     std::string objectName = (delimPos == std::string::npos ? localUri : localUri.substr(0, delimPos));
+    RemoteObjectServer *newros = new RemoteObjectServer();//objectName, ri.getClientFormattedIp(), "-1");
 
-    RemoteObjectServer *newros = new RemoteObjectServer(objectName, ri.getClientFormattedIp(), "-1");
-    //cJSON *root = echoIndex();
-    mg_printf(ri.getClientStructure(), "HTTP/1.1 200 OK\r\n"
-              "Content-Type: text/plain\r\n\r\n"
-              "%s", ri.getCompleteUri());//cJSON_Print(root));
-    //cJSON_Delete(root);
-    mRMpool.push_back(newros);
+    mg_read(ri.getClientStructure(), requestBody, sizeof(requestBody));
+    try {
+      newros->parseJString(requestBody);
+      mRMpool.push_back(newros);
+      addStatusMsg(&root, "Registration succeded : Object indexed into service.");
+    } catch(BadJSONFormatException) {
+      addStatusMsg(&root, "Registration canceled : Unable to parse received data!");  
+    }
 
     return root;
   }});

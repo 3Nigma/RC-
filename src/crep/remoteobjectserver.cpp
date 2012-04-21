@@ -1,7 +1,19 @@
 #include "remoteobjectserver.hpp"
 
-RemoteObjectServer::RemoteObjectServer(const std::string &name, const std::string &ip, const std::string &port)
-    : Replyer(name), mIp(ip), mPort(port), mInReturnCount(0) {
+RemoteObjectServer::RemoteObjectServer()
+    : Replyer() {
+}
+
+cJSON *RemoteObjectServer::parseJString(const std::string &jstring) {
+  cJSON *root = cJSON_Parse(jstring.c_str());
+
+  if(nullptr != root) {
+    cJSON_Delete(root);
+  }
+  else
+    throw BadJSONFormatException();
+
+  return root;
 }
 
 void RemoteObjectServer::setInterface(const std::string &in) {
@@ -26,8 +38,4 @@ cJSON *RemoteObjectServer::echoInterface() {
   cJSON_AddItemToObject(in, "c++", cJSON_CreateString(mInterface.c_str()));
 
   return root;
-}
-
-bool RemoteObjectServer::handleGetRequest(struct mg_connection *client, const std::string &uri) {
-  return true;
 }
