@@ -8,16 +8,28 @@ RemRep::RemRep(const std::string &lports) : Replyer("self"), mListenPorts(lports
                 {"register", [&](RequestInfo &ri) -> cJSON* {
     cJSON *root = nullptr;
     char requestBody[32768];
-    RemoteObjectServer *newros = new RemoteObjectServer();
-
-    mg_read(ri.getClientStructure(), requestBody, sizeof(requestBody));
+ 
     try {
+      RemoteObjectServer *newros = new RemoteObjectServer(ri.getRequestMethodArgument(0));
+
+      mg_read(ri.getClientStructure(), requestBody, sizeof(requestBody));
       newros->parseJString(requestBody);
       mRMpool.push_back(newros);
       addStatusMsg(&root, "Registration succeded : Object indexed into service.");
     } catch(BadJSONFormatException) {
       addStatusMsg(&root, "Registration canceled : Unable to parse received data!");  
+    } catch(ArgumentIndexOutOfBounds) {
+      addStatusMsg(&root, "Registration canceled : Can not read object name from query string!");  
     }
+
+    return root;
+  }});
+
+  // add unregister filter
+  addPostFilter(std::tuple<std::string, std::function<cJSON *(RequestInfo &)>>
+                {"unregister", [&](RequestInfo &ri) -> cJSON* {
+    cJSON *root = nullptr;
+    
 
     return root;
   }});

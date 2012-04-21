@@ -4,5 +4,6 @@
 #include <exception>
 
 class BadJSONFormatException : public std::exception { };
+class ArgumentIndexOutOfBounds : public std::exception { };
 
 #endif

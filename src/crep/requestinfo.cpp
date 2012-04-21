@@ -1,7 +1,7 @@
 #include "requestinfo.hpp"
 
 RequestInfo::RequestInfo(struct mg_connection *cl, const struct mg_request_info *ri) : mClient(cl), mRequestInfo(ri) {
-  parseUri(ri->uri);
+  parseCompleteUri(ri->uri, ri->query_string == nullptr ? "" : ri->query_string);
 }
 
 void RequestInfo::setClientStructure(struct mg_connection *newcl) {
@@ -14,11 +14,15 @@ struct mg_connection *RequestInfo::getClientStructure() {
 
 void RequestInfo::setRequestInfoStructure(struct mg_request_info *newri) {
   mRequestInfo = newri;
-  parseUri(newri->uri);
+  parseCompleteUri(newri->uri, newri->query_string == nullptr ? "" : newri->query_string);
 }
 
-char *RequestInfo::RequestInfo::getCompleteUri() const {
+char *RequestInfo::getCompleteUri() const {
   return mRequestInfo->uri;
+}
+
+char *RequestInfo::getCompleteQuery() const {
+  return mRequestInfo->query_string;
 }
 
 std::string RequestInfo::getRequestObjectName() {
@@ -27,6 +31,12 @@ std::string RequestInfo::getRequestObjectName() {
 
 std::string RequestInfo::getRequestMethodName() {
   return mMethodReqName;
+}
+
+std::string RequestInfo::getRequestMethodArgument(unsigned int index) {
+  if(index >= mArguments.size()) throw ArgumentIndexOutOfBounds();
+
+  return mArguments[index];
 }
 
 std::string RequestInfo::getClientFormattedIp() {
@@ -41,8 +51,21 @@ int RequestInfo::getClientPort() {
   return mRequestInfo->remote_port;
 }
 
-void RequestInfo::parseUri(const std::string &uri) {
+std::vector<std::string> RequestInfo::splitString(const std::string &s, char delim) {
+    std::vector<std::string> elems;
+    std::stringstream ss(s);
+    std::string item;
+
+    while(!s.empty() && std::getline(ss, item, delim)) {
+        elems.push_back(item);
+    }
+
+    return elems;
+}
+
+void RequestInfo::parseCompleteUri(const std::string &uri, const std::string &query) {
   std::string processedUri = uri;
+  std::string processedQuery = query;
   size_t delimPos;
 
   // get object request name
@@ -68,4 +91,7 @@ void RequestInfo::parseUri(const std::string &uri) {
     mMethodReqName = processedUri.substr(0, delimPos);
     processedUri = processedUri.substr(delimPos);
   }
+
+  // get present arguments
+  mArguments = splitString(processedQuery, ';');
 }

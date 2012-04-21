@@ -1,7 +1,7 @@
 #include "remoteobjectserver.hpp"
 
-RemoteObjectServer::RemoteObjectServer()
-    : Replyer() {
+RemoteObjectServer::RemoteObjectServer(const std::string &name)
+    : Replyer(name) {
 }
 
 void RemoteObjectServer::parseJString(const std::string &jstring) {
@@ -9,12 +9,6 @@ void RemoteObjectServer::parseJString(const std::string &jstring) {
 
   if(nullptr != reqRoot) {
     cJSON *obj = nullptr;
-
-    if((obj = cJSON_GetObjectItem(reqRoot, "objectname")) == nullptr) {
-      cJSON_Delete(reqRoot);
-      throw BadJSONFormatException();
-    } else
-      setName(obj->valuestring);
      
     if((obj = cJSON_GetObjectItem(reqRoot, "serverip")) == nullptr) {
       cJSON_Delete(reqRoot);

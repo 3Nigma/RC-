@@ -8,7 +8,7 @@
 
 class RemoteObjectServer : public Replyer {
 public:
-  RemoteObjectServer();
+  RemoteObjectServer(const std::string &name);
   
   void parseJString(const std::string &jstring);
   void setInterface(const std::string &in);
