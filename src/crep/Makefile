@@ -5,7 +5,7 @@ CXX := g++
 
 3RDPDIR := ../../3rdp
 BINDIR := ../../bin
-LDFLAGS := -pthread -ldl -lm
+LDFLAGS := -g -pthread -ldl -lm
 CXXFLAGS := -std=c++0x -I$(3RDPDIR)
 3RDPOBJS := $(3RDPDIR)/mongoose/mongoose.o \
 $(3RDPDIR)/cJSON/cjson.o

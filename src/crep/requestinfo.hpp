@@ -16,9 +16,15 @@ public:
   void setRequestInfoStructure(struct mg_request_info *newri);
   char *getCompleteUri() const;
 
+  std::string getRequestObjectName();
+  std::string getRequestMethodName();
   std::string getClientFormattedIp();
   int getClientPort();
+private:
+  void parseUri(const std::string &origUri);
 protected:
+  std::string mObjectReqName;
+  std::string mMethodReqName;
   struct mg_connection *mClient;
   const struct mg_request_info *mRequestInfo;
 };

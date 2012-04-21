@@ -20,6 +20,7 @@ public:
   void StartRepServer();
   void StopRepServer();
 
+  cJSON *handleObjectRequest(RequestInfo &ri, const std::string &requestType);
 protected:
   std::list<Replyer *> mRMpool;
   std::string mListenPorts;

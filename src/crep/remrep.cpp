@@ -3,24 +3,12 @@
 RemRep::RemRep(const std::string &lports) : Replyer("self"), mListenPorts(lports) {
   mRMpool.push_back(this);
 
-  // add index filter
-  addGetFilter(std::tuple<std::string, std::function<cJSON *(RequestInfo &, const std::string &)>>
-               {"", [&](RequestInfo &ri, const std::string &procUri) -> cJSON* {
-    cJSON *root = echoIndex();
-    
-    return root;
-  }});
-
   // add register filter
-  addPostFilter(std::tuple<std::string, std::function<cJSON *(RequestInfo &, const std::string &)>>
-                {"register", [&](RequestInfo &ri, const std::string &procUri) -> cJSON* {
+  addPostFilter(std::tuple<std::string, std::function<cJSON *(RequestInfo &)>>
+                {"register", [&](RequestInfo &ri) -> cJSON* {
     cJSON *root = nullptr;
-    std::string localUri = procUri;
     char requestBody[32768];
-    if(localUri[0] == '/') localUri = localUri.substr(1);
-    size_t delimPos = localUri.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_");
-    std::string objectName = (delimPos == std::string::npos ? localUri : localUri.substr(0, delimPos));
-    RemoteObjectServer *newros = new RemoteObjectServer();//objectName, ri.getClientFormattedIp(), "-1");
+    RemoteObjectServer *newros = new RemoteObjectServer();
 
     mg_read(ri.getClientStructure(), requestBody, sizeof(requestBody));
     try {
@@ -49,43 +37,26 @@ void RemRep::StartRepServer() {
 void RemRep::StopRepServer() {
   mg_stop(mCtx);
 }
-  
-/*bool RemRep::handlePostRequest(const RequestInfo &ri) {
-  std::string processedUri = ri.getCompleteUri();
 
-    /*if(processedUri == "/") processedUri = "/self";
-    processedUri = processedUri.substr(1);  // go pass the '/' character
+cJSON *RemRep::handleObjectRequest(RequestInfo &ri, const std::string &requestType) {
+  cJSON *root = nullptr;
+  bool objFound = false;
+  std::string objReqName = ri.getRequestObjectName();
 
-    if(processedUri.find(this->mName) == 0) {
-      processedUri = processedUri.substr(this->mName.length());
-      processedUri = processedUri.substr(1);  // go pass the '/' character
-
-      // check method name
-      if(processedUri.find("register") == 0) {
-        processedUri = processedUri.substr(std::string("register").length());
-        processedUri = processedUri.substr(1);  // go pass the '/' character
-
-        if(processedUri.length() != 0) {
-          // we have a new class to register
-          char remoteInterface[10000];
-          RemoteObjectServer *newROS = new RemoteObjectServer(processedUri, 
-                                                              std::to_string(post_info->remote_ip),
-                                                              std::to_string(post_info->remote_port));
-          //mg_read(post_info, remoteInterface, sizeof(remoteInterface));
-          newROS->setInterface(remoteInterface);
-          mRMpool.push_back(newROS);
-        }
-
-      } else if (processedUri.find("unregister") == 0) {
-        processedUri = processedUri.substr(std::string("unregister").length());
-        processedUri = processedUri.substr(1);  // go pass the '/' character
-
-      } else
-        return false;
+  for(Replyer *rCandidate : mRMpool)
+    if(rCandidate->getName() == objReqName) {
+      if(requestType == "GET") {
+        root = rCandidate->handleGetRequest(ri);
+      } else if(requestType == "POST")
+        root = rCandidate->handlePostRequest(ri);
+      objFound = true;
     }
 
-  return true;
-}*/
+  if(!objFound)
+    addStatusMsg(&root, "Unable to process request : Unrecognized OBJECT.");  
+
+  return root;
+}
 
 cJSON *RemRep::echoIndexHook() {
   cJSON *root = cJSON_CreateObject();
@@ -123,22 +94,23 @@ struct mg_request_info {
 */
   cJSON *root = nullptr;
   RequestInfo ri(client, request_info);
-  const std::string requestType = request_info->request_method;
+  const std::string reqType = request_info->request_method;
+  const std::string reqUri = ri.getCompleteUri();
   RemRep *repo = (RemRep *)request_info->user_data;
 
   switch(event) {
   case MG_NEW_REQUEST:  // New HTTP request has arrived from the client
-    std::cout << "Client [" << ri.getClientFormattedIp() << ":" << ri.getClientPort() << "] request inbound : " 
-              << requestType << " " << ri.getCompleteUri() << std::endl;
-    if(requestType == "GET") {
-      root = repo->handleGetRequest(ri);
-    } else if(requestType == "POST")
-      root = repo->handlePostRequest(ri);
-
-    mg_printf(ri.getClientStructure(), "HTTP/1.1 200 OK\r\n"
-              "Content-Type: text/plain\r\n\r\n"
-              "%s", cJSON_Print(root));
-
+    if(reqUri.length() == 1) {
+      mg_printf(ri.getClientStructure(), "HTTP/1.1 301 Moved Permanently\r\n"
+                "Location: /self\r\n");
+    } else {
+      std::cout << "Client [" << ri.getClientFormattedIp() << ":" << ri.getClientPort() << "] request inbound : " 
+                << reqType << " '" << reqUri << "'" << std::endl;
+      root = repo->handleObjectRequest(ri, reqType);
+      mg_printf(ri.getClientStructure(), "HTTP/1.1 200 OK\r\n"
+                "Content-Type: text/plain\r\n\r\n"
+                "%s", cJSON_Print(root));
+    }
     return (void *)"";  // Mark as processed
     break;
   case MG_HTTP_ERROR:  // HTTP error must be returned to the client

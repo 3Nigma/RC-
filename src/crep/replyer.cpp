@@ -5,6 +5,8 @@ Replyer::Replyer(const std::string &name) : mName(name) {
 
   time(&rawtime);
   mCreationTime = localtime(&rawtime);
+
+  registerIndexResponse();
 }
 
 Replyer::~Replyer() {
@@ -34,50 +36,29 @@ cJSON *Replyer::handlePostRequest(RequestInfo &ri) {
   return this->handleRequest(ri, mPOSTFilters);
 }
 
-void Replyer::addPostFilter(const std::tuple<std::string, std::function<cJSON *(RequestInfo &, const std::string &)> > &newpfil) {
+void Replyer::addPostFilter(const std::tuple<std::string, std::function<cJSON *(RequestInfo &)> > &newpfil) {
   mPOSTFilters.push_back(newpfil);
 }
 
-void Replyer::addGetFilter(const std::tuple<std::string, std::function<cJSON *(RequestInfo &, const std::string &)> > &newgfil) {
+void Replyer::addGetFilter(const std::tuple<std::string, std::function<cJSON *(RequestInfo &)> > &newgfil) {
   mGETFilters.push_back(newgfil);
 }
 
-cJSON *Replyer::handleRequest(RequestInfo &ri, std::list<std::tuple<std::string, std::function<cJSON *(RequestInfo &, const std::string &)>>> &fFilters) {
+cJSON *Replyer::handleRequest(RequestInfo &ri, std::list<std::tuple<std::string, std::function<cJSON *(RequestInfo &)>>> &fFilters) {
   cJSON *root = nullptr;
-  std::string processedUri = ri.getCompleteUri();
+  std::string methodName = ri.getRequestMethodName();
+  
+  for(std::tuple<std::string, std::function<cJSON *(RequestInfo &)>> fCandidate : fFilters) {
+    if(std::get<0>(fCandidate) == methodName) {
+      root = (std::get<1>(fCandidate))(ri);
 
-  if(processedUri == "/") processedUri = "/self";
-  if(processedUri[0] == '/') processedUri = processedUri.substr(1);  // go pass the '/' character
-
-  if(processedUri.find(this->mName) == 0) {
-    // the request is intended for current Replyer instance
-    processedUri = processedUri.substr(this->mName.length());
-    if(processedUri[0] == '/') processedUri = processedUri.substr(1);  // go pass the '/' character
-
-    // aquire method name
-    size_t delimPos = processedUri.find("/");
-    std::string methodName;
-    if(delimPos != std::string::npos) {
-      methodName = processedUri.substr(0, delimPos);
-      processedUri = processedUri.substr(delimPos);
-    } else {
-      methodName = processedUri;
-      processedUri = "";
+      if(cJSON_GetObjectItem(root, "statusmsg") == nullptr)
+        addStatusMsg(&root, "All OK");
     }
-   
-    for(std::tuple<std::string, std::function<cJSON *(RequestInfo &, const std::string &)>> fCandidate : fFilters)
-      if(std::get<0>(fCandidate) == methodName) {
-        root = (std::get<1>(fCandidate))(ri, processedUri);
-
-        if(cJSON_GetObjectItem(root, "statusmsg") == nullptr)
-          addStatusMsg(&root, "All OK");
-      }
-
-    if(root == nullptr)
-      addStatusMsg(&root, "Unable to process request : unrecognized METHOD");
   }
-  else
-    addStatusMsg(&root, "Unable to process request : unrecognized OBJECT");  
+
+  if(root == nullptr)
+    addStatusMsg(&root, "Unable to process request : Unrecognized METHOD.");
 
   return root;
 }
@@ -91,11 +72,20 @@ cJSON *Replyer::echoIndex() {
   cJSON *root = cJSON_CreateObject();
   cJSON *childSpecRoot = nullptr;
 
-  cJSON_AddStringToObject(root, "objectname", mName.c_str());
+  cJSON_AddStringToObject(root, "objectname", getName().c_str());
   cJSON_AddStringToObject(root, "createdon", formattedCreationTime.substr(0, formattedCreationTime.length()-1).c_str());
 
   if((childSpecRoot = echoIndexHook()) != nullptr)
     cJSON_AddItemReferenceToObject(root, "hookreport", childSpecRoot);
 
   return root;
+}
+
+void Replyer::registerIndexResponse() {
+  addGetFilter(std::tuple<std::string, std::function<cJSON *(RequestInfo &)>>
+               {"", [&](RequestInfo &ri) -> cJSON* {
+    cJSON *root = echoIndex();
+    
+    return root;
+  }});
 }
