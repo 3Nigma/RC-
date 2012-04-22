@@ -3,12 +3,14 @@
 #include <list>
 #include <boost/regex.hpp>
 
-std::string rcosMethodTemplate = "if(methodName == <^<LocalMethodName>^>) \n\
-  cJSON_Add<^<cJSON_LocalMethodReturnType>^>ToObject(root, \"returnvalue\", <^<LocalFunctionCall>^>); \n\
-";
+std::string rcosMethodTemplate = "if(methodName == \"<^<LocalMethodName>^>\") {\n\
+  <^<OtherOps>^>\
+  cJSON_Add<^<cJSON_LocalMethodReturnType>^>ToObject(replyroot, \"returnvalue\", <^<LocalFunctionCallResult>^>); \n\
+}";
 
 std::string rcosClassTemplate = "// RemoteC++Compiler generated file. Please be carefull what you'r touching here! \n\
 #include <iostream> \n\
+#include <string> \n\
 #include <cJSON/cJSON.h> \n\
 #include \"mongoose/mongoose.h\" \n\
 #include \"curl/curl.h\" \n\
@@ -16,6 +18,9 @@ std::string rcosClassTemplate = "// RemoteC++Compiler generated file. Please be 
 class RCObjectServer { \n\
 public: \n\
   RCObjectServer() = default; \n\
+ \n\
+ \\\\ region dedicated to hosting virtual function client declarations \n\
+<^<VirtualHostedFunctionDeclarations>^>\n\
  \n\
   void RegisterObject(const std::string &serverAddress, unsigned int localPort, const std::string &serverObjName = \"\", const std::string &localServer = \"\") { \n\
     CURL *repoLink = nullptr; \n\
@@ -64,7 +69,7 @@ protected: \n\
       methodName = jsObj->valuestring; \n\
  \n\
     // handle method calls \n\
-    <^<ClientWebCallback>^> \n\
+<^<ClientWebCallback>^> \n\
  \n\
     // reply return value \n\
     mg_printf(client, \"HTTP/1.1 200 Ok\\r\\n\" \n\
@@ -88,15 +93,92 @@ protected: \n\
 
 class RCOSMethod {
 public:
-  RCOSMethod(const std::string &retType, const std::string &name)
-    : mReturnType(retType), mName(name) { }
+  enum ImplementedType {UNKNOWN, STRING, INTEGER, DOUBLE, BOOLEAN, VOID};
+
+  RCOSMethod(const std::string &retType, const std::string &name, const std::string &function)
+    : mName(name), mCompleteFunctionDeclaration(function) {
+    mReturnType = parseTypeFromString(retType);
+  }
+  std::string getCompleteDeclaration() {
+    return std::string("virtual ") + mCompleteFunctionDeclaration;
+  }
+  std::string getFormattedCallCode() {
+    std::string callCode = rcosMethodTemplate;
+    std::string methodCall = "";
+
+    callCode = boost::regex_replace(rcosMethodTemplate, boost::regex("<\\^<LocalMethodName>\\^>"), mName);
+    switch(mReturnType) {
+    case VOID:
+    case STRING:
+      callCode = boost::regex_replace(callCode, boost::regex("<\\^<cJSON_LocalMethodReturnType>\\^>"), "String");
+      break;
+    case INTEGER:
+    case DOUBLE:
+      callCode = boost::regex_replace(callCode, boost::regex("<\\^<cJSON_LocalMethodReturnType>\\^>"), "Number");
+      break;
+    case BOOLEAN:
+      callCode = boost::regex_replace(callCode, boost::regex("<\\^<cJSON_LocalMethodReturnType>\\^>"), "Bool");
+      break;
+    default: // unknown type
+      break;
+    }
+   
+    // fill in the method and result
+    int argIndex = 0;
+    methodCall += mName + std::string("(");
+    for(ImplementedType argType : mArgTypes) {
+      switch(argType) {
+      case STRING:
+        methodCall += "std::string(cJSON_GetObjectItem(root, \"argument" + std::to_string(argIndex) + "\")->valuestring)";
+        break;
+      case INTEGER:
+        methodCall += "cJSON_GetObjectItem(root, \"argument" + std::to_string(argIndex) + "\")->valueint";
+        break;
+      case DOUBLE:
+        methodCall += "cJSON_GetObjectItem(root, \"argument" + std::to_string(argIndex) + "\")->valuedouble";
+        break;
+      case BOOLEAN:
+        //TODO : Implement this
+        methodCall += "/* Boolean arguments not yet implemented! */";
+        break;
+      default: // unknown type
+        break;  
+      }
+      if(argIndex != mArgTypes.size() - 1) methodCall += ", ";
+      argIndex ++;
+    }
+    methodCall += std::string(")");
+
+    if(mReturnType == VOID) {
+      callCode = boost::regex_replace(callCode, boost::regex("<\\^<OtherOps>\\^>"), methodCall);
+      callCode = boost::regex_replace(callCode, boost::regex("<\\^<LocalFunctionCallResult>\\^>"), "(void) No return");
+    } else {
+      callCode = boost::regex_replace(callCode, boost::regex("<\\^<OtherOps>\\^>"), "");
+      callCode = boost::regex_replace(callCode, boost::regex("<\\^<LocalFunctionCallResult>\\^>"), methodCall);
+    }
+
+    return callCode;
+  }
   void pushArgument(const std::string &argType) {
-    mArgList.push_back(argType);
+    mArgTypes.push_back(parseTypeFromString(argType));
   }
 private:
-  std::string mReturnType;
+  ImplementedType mReturnType;
   std::string mName;
-  std::list<std::string> mArgList;
+  std::string mCompleteFunctionDeclaration;
+  std::list<ImplementedType> mArgTypes;
+
+  ImplementedType parseTypeFromString(const std::string &type) {
+    ImplementedType recognizedType = UNKNOWN;
+
+    if(type.find("int") != std::string::npos) recognizedType = INTEGER;
+    else if(type.find("string") != std::string::npos) recognizedType = STRING;
+    else if(type.find("double") != std::string::npos) recognizedType = DOUBLE;
+    else if(type.find("bool") != std::string::npos) recognizedType = BOOLEAN;
+    else if(type.find("void") != std::string::npos) recognizedType = VOID;
+
+    return recognizedType;
+  }
 };
 
 class RCOSCreator {
@@ -129,17 +211,17 @@ public:
     }
 
     // get methods
-    boost::regex methExpr("USERCC +([\\w:]+) +(\\w+)\\(([\\w, :]+)\\) *;");
+    boost::regex methExpr("USERCC +(([\\w:]+) +(\\w+) *\\(([\\w, :]+)\\) *;)");
     boost::sregex_iterator m1(mHRawContent.begin(), mHRawContent.end(), methExpr);
     boost::sregex_iterator m2;
     std::for_each(m1, m2, [&](const boost::smatch &m) -> bool{
-      // (1) = return value, (2) = method name, (3) = method argument comma separated list
-      std::cout << "RCC : New method : return type '" << m[1] << "', name '" << m[2] << "' and arguments : "; 
-      RCOSMethod newMet(m[1], m[2]);
-      std::string argList = m[3];
+      // (1) complete function declaration, (2) = return value, (3) = method name, (4) = method argument comma separated list
+      std::cout << "RCC : New method : return type '" << m[2] << "', name '" << m[3] << "' and arguments : "; 
+      RCOSMethod newMet(m[2], m[3], m[1]);
+      std::string argList = m[4];
 
       // get method arguments
-      boost::regex argExpr("(int|(?:std::)?string|double)");
+      boost::regex argExpr("((?:unsigned +)?int|(?:std::)?string|double|bool|void)");
       boost::sregex_iterator m3(argList.begin(), argList.end(), argExpr);
       boost::sregex_iterator m4;
       std::for_each(m3, m4, [&](const boost::smatch &ma) -> bool{
@@ -168,12 +250,13 @@ public:
   void composeSource() {
     mSContent = rcosClassTemplate;
     
-    // fill in ClassName and ClassInterface
+    // fill in ClassName, ClassInterface and virtual function declarations
     mSContent = boost::regex_replace(mSContent, boost::regex("<\\^<ObjectRegisterName>\\^>"), mServerClassName);
     mSContent = boost::regex_replace(mSContent, boost::regex("<\\^<ClassInterface>\\^>"), mHProcessedContent);
-
-    // add methods and method calls
     
+    // add methods and method calls
+    mSContent = boost::regex_replace(mSContent, boost::regex("<\\^<VirtualHostedFunctionDeclarations>\\^>"), getVirtualClientFctDeclarations());
+    mSContent = boost::regex_replace(mSContent, boost::regex("<\\^<ClientWebCallback>\\^>"), getClientWebCallCode());
 
     std::cout << "Composed source file :" << std::endl
               << mSContent;
@@ -184,6 +267,25 @@ private:
   std::string mHRawContent;
   std::string mHProcessedContent;
   std::list<RCOSMethod> mServerMethods;
+
+  std::string getClientWebCallCode() {
+    std::string callCode = "";
+
+    for(RCOSMethod met : mServerMethods) {
+      callCode += met.getFormattedCallCode() + std::string("\\n");
+    }
+
+    return callCode;
+  }
+
+  std::string getVirtualClientFctDeclarations() {
+    std::string formattedClientFcts = "";
+
+    for(RCOSMethod met : mServerMethods)
+      formattedClientFcts += met.getCompleteDeclaration() + std::string("\\n");
+
+    return formattedClientFcts;
+  }
 };
 
 int main(int argc, char *argv[]) {
