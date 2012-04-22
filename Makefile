@@ -2,7 +2,9 @@ CXX := g++
 CXXFLAGS := -I./3rdp
 CREPO := 
 
-all: crep rcc
+.PHONY:tests clean
+
+all: crep rcc tests
 
 3rdpdeps:
 	cd 3rdp; make
@@ -12,6 +14,9 @@ crep: 3rdpdeps
 
 rcc: 3rdpdeps
 	cd src/rcc; make
+
+tests:
+	cd tests; make
 
 clean:
 	cd 3rdp; make clean

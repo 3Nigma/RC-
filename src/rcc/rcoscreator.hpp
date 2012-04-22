@@ -13,6 +13,8 @@ public:
 
   bool parseHeader();
   void composeSource();
+  void saveRCOS(std::string dir);
+
 private:
   std::string mSContent;
   std::string mServerClassName;
@@ -22,6 +24,7 @@ private:
 
   std::string getClientWebCallCode();
   std::string getVirtualClientFctDeclarations();
+  std::string getFileSaveName();
 };
 
 #endif

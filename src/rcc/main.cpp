@@ -6,6 +6,7 @@ int main(int argc, char *argv[]) {
 
   rcosc.parseHeader();
   rcosc.composeSource();
+  rcosc.saveRCOS(argv[2]);
 
   return 0;
 }

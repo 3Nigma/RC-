@@ -11,7 +11,7 @@ RCOSMethod::RCOSMethod(const std::string &retType, const std::string &name, cons
 }
 
 std::string RCOSMethod::getCompleteDeclaration() {
-  return std::string("virtual ") + mCompleteFunctionDeclaration;
+  return std::string("virtual ") + mCompleteFunctionDeclaration + std::string(" = 0;");
 }
 
 std::string RCOSMethod::getFormattedCallCode() {
@@ -37,7 +37,7 @@ std::string RCOSMethod::getFormattedCallCode() {
 
   // fill in the method and result
   int argIndex = 0;
-  methodCall += mName + std::string("(");
+  methodCall += std::string("rcos->") + mName + std::string("(");
   for(ImplementedType argType : mArgTypes) {
     switch(argType) {
     case STRING:
@@ -60,14 +60,15 @@ std::string RCOSMethod::getFormattedCallCode() {
     argIndex ++;
   }
   methodCall += std::string(")");
+  if(mReturnType == STRING) methodCall += std::string(".c_str()");
 
-    if(mReturnType == VOID) {
-      callCode = boost::regex_replace(callCode, boost::regex("<\\^<OtherOps>\\^>"), methodCall);
-      callCode = boost::regex_replace(callCode, boost::regex("<\\^<LocalFunctionCallResult>\\^>"), "(void) No return");
-    } else {
-      callCode = boost::regex_replace(callCode, boost::regex("<\\^<OtherOps>\\^>"), "");
-      callCode = boost::regex_replace(callCode, boost::regex("<\\^<LocalFunctionCallResult>\\^>"), methodCall);
-   }
+  if(mReturnType == VOID) {
+    callCode = boost::regex_replace(callCode, boost::regex("<\\^<OtherOps>\\^>"), methodCall);
+    callCode = boost::regex_replace(callCode, boost::regex("<\\^<LocalFunctionCallResult>\\^>"), "(void) No return");
+  } else {
+    callCode = boost::regex_replace(callCode, boost::regex("<\\^<OtherOps>\\^>"), "");
+    callCode = boost::regex_replace(callCode, boost::regex("<\\^<LocalFunctionCallResult>\\^>"), methodCall);
+  }
 
   return callCode;
 }
