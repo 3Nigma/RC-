@@ -234,7 +234,7 @@ std::string RCOSCreator::getPostedInterface() {
   std::string clientInterface = "";
 
   for(RCOSMethod met : mServerMethods)
-    clientInterface += met.getSimpleDeclaration() + std::string("\\\\n\\\\\n");
+    clientInterface += met.getSimpleDeclaration() + std::string(";\\\\\n");
 
   return clientInterface;
 }
