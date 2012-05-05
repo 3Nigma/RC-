@@ -18,45 +18,23 @@ public: \n\
 <^<VirtualHostedFunctionDeclarations>^>\n\
  \n\
   void RegisterObject(const std::string &serverAddress, unsigned int localObjectPort, const std::string &serverObjName = \"\", const std::string &localServer = \"\") { \n\
-    CURL *repoLink = nullptr; \n\
-    cJSON *root = cJSON_CreateObject(); \n\
- \n\
-    std::string serverUrl; \n\
-    if(serverAddress.find(\"http://\") != 0) \n\
-      serverUrl = \"http://\"; \n\
-    if(serverObjName.empty()) \n\
-      serverUrl += serverAddress + \"/self/register?<^<ObjectRegisterName>^>\"; \n\
-    else \n\
-      serverUrl += serverAddress + \"/self/register?\" + serverObjName; \n\
- \n\
-    if((repoLink = curl_easy_init()) != nullptr) { \n\
-      // create register body \n\
-      mListenPort = localObjectPort; \n\
-      cJSON_AddStringToObject(root, \"serverip\", localServer.c_str()); \n\
-      cJSON_AddNumberToObject(root, \"serverport\", localObjectPort); \n\
-      cJSON_AddStringToObject(root, \"interface\", \"<^<ClassInterface>^>\"); \n\
- \n\
-      // setup CURL \n\
-      curl_easy_setopt(repoLink, CURLOPT_URL, serverUrl.c_str()); \n\
-      curl_easy_setopt(repoLink, CURLOPT_POSTFIELDS, cJSON_Print(root)); \n\
-      curl_easy_setopt(repoLink, CURLOPT_WRITEFUNCTION, repoReply); \n\
-      curl_easy_setopt(repoLink, CURLOPT_WRITEDATA, NULL); \n\
- \n\
-      // register it (object)! \n\
-      curl_easy_perform(repoLink); \n\
- \n\
-      // clean it up! \n\
-      curl_easy_cleanup(repoLink); \n\
- \n\
-      // start answering to clients \n\
-      StartServingRequests(); \n\
+    if(!sendRegistrationRequest(serverAddress, localObjectPort, serverObjName, localServer)) { \n\
+      return; \n\
     } \n\
-  } \n\
-  void StartServingRequests() { \n\
-    const char *options[] = {\"listening_ports\", std::to_string(mListenPort).c_str(), NULL}; \n\
  \n\
-    if((mCtx = mg_start(&ClientWebCallback, this, options)) == nullptr) \n\
+    // start answering to clients \n\
+    StartServingRequests(); \n\
+  } \n\
+  bool StartServingRequests() { \n\
+    std::string listenPort = std::to_string(mListenPort).c_str(); \n\
+    const char *options[] = {\"listening_ports\", listenPort.c_str(), NULL}; \n\
+ \n\
+    if((mCtx = mg_start(&ClientWebCallback, this, options)) == nullptr) {\n\
       std::cerr << \"Unable to initialize object server\" << std::endl; \n\
+      return false; \n\
+    } \n\
+ \n\
+    return true; \n\
   } \n\
   void StopServingRequests() { \n\
     mg_stop(mCtx); \n\
@@ -76,21 +54,27 @@ protected: \n\
     switch(event) { \n\
     case MG_NEW_REQUEST:  // New HTTP request has arrived from the client \n\
       mg_read(client, reqBody, sizeof(reqBody)); \n\
-      root = cJSON_Parse(reqBody); \n\
+      if(strlen(reqBody) == 0 || (root = cJSON_Parse(reqBody)) == nullptr) { \n\
+        cJSON_AddStringToObject(replyroot, \"statusmsg\", \"No or invalid JSON message body provided!\"); \n\
+      } else { \n\
+        // aquire method name \n\
+        if((jsObj = cJSON_GetObjectItem(root, \"methodname\")) != nullptr) \n\
+          methodName = jsObj->valuestring; \n\
  \n\
-      // aquire method name \n\
-      if((jsObj = cJSON_GetObjectItem(root, \"methodname\")) != nullptr) \n\
-        methodName = jsObj->valuestring; \n\
- \n\
-      // handle method calls \n\
+        // handle method calls \n\
+        try { \n\
 <^<ClientWebCallback>^> \n\
+        } catch(...) { \n\
+          std::cerr << \"Something horrible happened to the actual method calls!\" << std::endl; \n\
+        }\n\
+ \n\
+        cJSON_Delete(root); \n\
+      } \n\
  \n\
       // reply return value \n\
       mg_printf(client, \"HTTP/1.1 200 Ok\\r\\n\" \n\
-                         \"Content-Type: text/plain\\r\\n\\r\\n\" \n\
-                         \"%s\", cJSON_Print(replyroot)); \n\
- \n\
-      cJSON_Delete(root); \n\
+                        \"Content-Type: text/plain\\r\\n\\r\\n\" \n\
+                        \"%s\", cJSON_Print(replyroot)); \n\
       cJSON_Delete(replyroot); \n\
  \n\
       return (void *)\"\";\n\
@@ -111,22 +95,56 @@ protected: \n\
  \n\
     return elCount; \n\
   } \n\
+ \n\
+  bool sendRegistrationRequest(const std::string &serverAddress, unsigned int localObjectPort, const std::string &serverObjName, const std::string &localServer) { \n\
+    char errBuff[CURL_ERROR_SIZE]; \n\
+    CURL *repoLink = nullptr; \n\
+    cJSON *root = cJSON_CreateObject(); \n\
+ \n\
+    std::string serverUrl; \n\
+    if(serverAddress.find(\"http://\") != 0) \n\
+      serverUrl = \"http://\"; \n\
+    if(serverObjName.empty()) \n\
+      serverUrl += serverAddress + \"/self/register?<^<ObjectRegisterName>^>\"; \n\
+    else \n\
+      serverUrl += serverAddress + \"/self/register?\" + serverObjName; \n\
+ \n\
+    if((repoLink = curl_easy_init()) != nullptr) { \n\
+      // create register body \n\
+      mListenPort = localObjectPort; \n\
+      cJSON_AddStringToObject(root, \"serverip\", localServer.c_str()); \n\
+      cJSON_AddNumberToObject(root, \"serverport\", localObjectPort); \n\
+      cJSON_AddStringToObject(root, \"interface\", \"<^<ClassInterface>^>\"); \n\
+ \n\
+      // setup CURL \n\
+      curl_easy_setopt(repoLink, CURLOPT_ERRORBUFFER, errBuff); \n\
+      curl_easy_setopt(repoLink, CURLOPT_URL, serverUrl.c_str()); \n\
+      curl_easy_setopt(repoLink, CURLOPT_POSTFIELDS, cJSON_Print(root)); \n\
+      curl_easy_setopt(repoLink, CURLOPT_WRITEFUNCTION, repoReply); \n\
+      curl_easy_setopt(repoLink, CURLOPT_WRITEDATA, NULL); \n\
+ \n\
+      // register it (object)! \n\
+      if(curl_easy_perform(repoLink) != 0) { \n\
+        std::cerr << \"Unable to process registration! : \" << errBuff << std::endl; \n\
+        return false; \n\
+      } \n\
+ \n\
+      // clean it up! \n\
+      curl_easy_cleanup(repoLink); \n\
+    } else { \n\
+      return false; \n\
+    } \n\
+   \n\
+    return true; \n\
+  } \n\
 };";
 
-RCOSCreator::RCOSCreator(const std::string &hLoc) {
-  std::ifstream fHeader(hLoc.c_str());
-
-  if(fHeader.good()) {
-    mHRawContent.assign(std::istreambuf_iterator<char>(fHeader), std::istreambuf_iterator<char>());
-    std::cout << "Raw header content : " << std::endl
-              << mHRawContent << std::endl;
-  } else
-    std::cerr << "Unable to open header file '" << hLoc << "'!" << std::endl;
-
-  fHeader.close();
+RCOSCreator::RCOSCreator(const std::string &cLoc) 
+  : RCOSInterface(cLoc){
+  
 }
 
-bool RCOSCreator::parseHeader() {
+bool RCOSCreator::parseCode() {
   // read the className
   boost::regex clasExpr("class +(\\w+) *: *public +RCObjectServer");
   boost::match_results<std::string::const_iterator> captures;
@@ -210,19 +228,4 @@ std::string RCOSCreator::getVirtualClientFctDeclarations() {
     formattedClientFcts += met.getCompleteDeclaration() + std::string("\\n");
 
   return formattedClientFcts;
-}
-
-void RCOSCreator::saveRCOS(std::string dir) {
-  if(dir[dir.length() - 1] != '/') dir += "/";
-  std::ofstream rcosResult(dir + getFileSaveName());
-
-  rcosResult << mSContent;
-  rcosResult.close();
-}
-
-std::string RCOSCreator::getFileSaveName() {
-  std::string fileNameChunk = mServerClassName;
-  std::transform(fileNameChunk.begin(), fileNameChunk.end(), fileNameChunk.begin(), ::tolower);
-
-  return std::string("rcos_") + fileNameChunk + std::string(".cpp");
 }

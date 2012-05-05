@@ -4,7 +4,7 @@
 int main(int argc, char *argv[]) {
   InfoServer rcosInfo;
 
-  rcosInfo.RegisterObject("127.0.0.1:8081", 8082);
+  rcosInfo.RegisterObject("127.0.0.1:8081", 8080);
   getchar();
 
   return 0;

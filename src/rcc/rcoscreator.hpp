@@ -5,26 +5,21 @@
 #include <fstream>
 #include <list>
 #include <boost/regex.hpp>
+
+#include "rcosinterface.hpp"
 #include "rcosmethod.hpp"
 
-class RCOSCreator {
+class RCOSCreator : public RCOSInterface {
 public:
-  RCOSCreator(const std::string &hLoc);
+  RCOSCreator(const std::string &cLoc);
 
-  bool parseHeader();
-  void composeSource();
-  void saveRCOS(std::string dir);
-
+  virtual bool parseCode();
+  virtual void composeSource();
 private:
-  std::string mSContent;
-  std::string mServerClassName;
-  std::string mHRawContent;
-  std::string mHProcessedContent;
   std::list<RCOSMethod> mServerMethods;
 
   std::string getClientWebCallCode();
   std::string getVirtualClientFctDeclarations();
-  std::string getFileSaveName();
 };
 
 #endif

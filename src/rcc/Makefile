@@ -10,7 +10,9 @@ CXXFLAGS := -std=c++0x -I$(3RDPDIR)
 3RDPOBJS := $(3RDPDIR)/mongoose/mongoose.o \
 $(3RDPDIR)/cJSON/cjson.o
 OBJS := rcosmethod.o \
-rcoscreator.o
+rcosinterface.o \
+rcoscreator.o \
+rcosrefurbisher.o
 
 %.o : %.cpp
 	$(CC) -c $(CXXFLAGS) -o $@ $< 

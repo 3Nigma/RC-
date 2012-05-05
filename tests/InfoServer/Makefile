@@ -18,8 +18,8 @@ infoserver.o
 all : rcos $(OBJS)
 	$(CXX) $(CXXFLAGS) $(3RDPOBJS) $(OBJS) main.cpp -o $(PROJ) $(LDFLAGS)
 
-rcos :
-	$(BINDIR)/rcc ./infoserver.hpp .
+rcos : infoserver.hpp
+	$(BINDIR)/rcc -s ./infoserver.hpp .
 
 clean:
 	rm -f $(BINDIR)/$(PROJ) $(OBJS)

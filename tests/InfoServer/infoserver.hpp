@@ -3,7 +3,7 @@
 
 #include <iostream>
 #include <string>
-#include "rcos_infoserver.cpp"
+#include "rcos_InfoServer.cpp"
 
 class InfoServer : public RCObjectServer {
 public:
