@@ -14,15 +14,15 @@ public:
   void setServerIp(const std::string &newip);
 
   void parseJString(const std::string &jstring);
-  void setInterface(const std::string &in);
-  const std::string getInterface();
+  void setInterface(cJSON *in);
+  cJSON *getInterface();
   unsigned int getInterfaceReturnCnt();
   cJSON *echoInterface();
 
 protected:
   std::string mIp;
   unsigned int mPort;
-  std::string mInterface;
+  cJSON *mInterface;
   unsigned int mInReturnCount;
 
   virtual cJSON *echoIndexHook();

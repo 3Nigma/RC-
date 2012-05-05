@@ -20,7 +20,7 @@ private:
 
   std::string getClientWebCallCode();
   std::string getVirtualClientFctDeclarations();
-  std::string getPostedInterface();
+  std::string getJPostedInterface(const std::string &jRoot, const std::string &jMethodHolder, const std::string &jArgListHolder);
 };
 
 #endif

@@ -10,12 +10,28 @@ RCOSMethod::RCOSMethod(const std::string &retType, const std::string &name, cons
   mReturnType = parseTypeFromString(retType);
 }
 
-std::string RCOSMethod::getSimpleDeclaration() {
-  return mCompleteFunctionDeclaration;
+std::string RCOSMethod::getJSONIntegrationInstructions(const std::string &jRoot, const std::string &jMethodHolder, const std::string &jArgListHolder) {
+  std::string comSequence;
+  int id;
+
+  comSequence = jMethodHolder + " = cJSON_CreateObject();\n";
+  comSequence += jArgListHolder + " = cJSON_CreateArray();\n";
+  comSequence += "cJSON_AddStringToObject(" + jMethodHolder + ", \"returntype\", \"" + parseStringFromType(mReturnType) + "\");\n";
+  for(id = 0; id < mArgTypes.size(); ++ id) {
+    comSequence += "cJSON_AddItemToArray(" + jArgListHolder + ", cJSON_CreateString(\"" + parseStringFromType(mArgTypes.at(id)) + "\"));\n";
+  }
+  comSequence += "cJSON_AddItemToObject(" + jMethodHolder + ", \"arguments\", " + jArgListHolder + ");\n"; 
+  comSequence += "cJSON_AddItemToObject(" + jRoot + ", \"" + mName + "\", " + jMethodHolder + ");\n"; 
+
+  return comSequence;
 }
 
-std::string RCOSMethod::getCompleteDeclaration() {
-  return std::string("virtual ") + getSimpleDeclaration() + std::string(" = 0;");
+std::string RCOSMethod::getSimpleDeclaration() {
+  return mCompleteFunctionDeclaration + std::string(";");
+}
+
+std::string RCOSMethod::getPureVirtualDeclaration() {
+  return std::string("virtual ") + mCompleteFunctionDeclaration + std::string(" = 0;");
 }
 
 std::string RCOSMethod::getFormattedCallCode() {
@@ -79,6 +95,18 @@ std::string RCOSMethod::getFormattedCallCode() {
 
 void RCOSMethod::pushArgument(const std::string &argType) {
   mArgTypes.push_back(parseTypeFromString(argType));
+}
+
+std::string RCOSMethod::parseStringFromType(ImplementedType type) {
+  std::string dataType = "";
+
+  if(type == INTEGER) dataType = "integer";
+  else if(type == STRING) dataType = "string";
+  else if(type == DOUBLE) dataType = "double";
+  else if(type == BOOLEAN) dataType = "bool";
+  else if(type == VOID) dataType = "void";
+
+  return dataType;
 }
 
 ImplementedType RCOSMethod::parseTypeFromString(const std::string &type) {

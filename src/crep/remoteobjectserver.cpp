@@ -38,22 +38,22 @@ void RemoteObjectServer::parseJString(const std::string &jstring) {
     } else
       mPort = obj->valueint;
 
-    if((obj = cJSON_GetObjectItem(reqRoot, "interface")) == nullptr) {
+    if((obj = cJSON_GetObjectItem(reqRoot, "methods")) == nullptr) {
       cJSON_Delete(reqRoot);
       throw BadJSONFormatException();
     } else
-      setInterface(obj->valuestring);
+      setInterface(obj);
 
   }
   else
     throw BadJSONFormatException();
 }
 
-void RemoteObjectServer::setInterface(const std::string &in) {
+void RemoteObjectServer::setInterface(cJSON *in) {
   mInterface = in;
 }
 
-const std::string RemoteObjectServer::getInterface() { 
+cJSON *RemoteObjectServer::getInterface() { 
   mInReturnCount++;
   return mInterface;
 }
@@ -76,7 +76,7 @@ cJSON *RemoteObjectServer::echoInterface() {
   //cJSON *in = nullptr;
 
   cJSON_AddStringToObject(root, "objectname", mName.c_str());
-  cJSON_AddStringToObject(root, "interface", mInterface.c_str());//in = cJSON_CreateObject());
+  cJSON_AddItemToObject(root, "methods", mInterface);//in = cJSON_CreateObject());
   //cJSON_AddItemToObject(in, "c++", cJSON_CreateString(mInterface.c_str()));
 
   return root;

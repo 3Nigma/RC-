@@ -100,6 +100,9 @@ protected: \n\
     char errBuff[CURL_ERROR_SIZE]; \n\
     CURL *repoLink = nullptr; \n\
     cJSON *root = cJSON_CreateObject(); \n\
+    cJSON *methodsRoot = cJSON_CreateObject(); \n\
+    cJSON *currentMethod = nullptr; \n\
+    cJSON *currentArgList = nullptr; \n\
  \n\
     std::string serverUrl; \n\
     if(serverAddress.find(\"http://\") != 0) \n\
@@ -114,7 +117,8 @@ protected: \n\
       mListenPort = localObjectPort; \n\
       cJSON_AddStringToObject(root, \"serverip\", localServer.c_str()); \n\
       cJSON_AddNumberToObject(root, \"serverport\", localObjectPort); \n\
-      cJSON_AddStringToObject(root, \"interface\", \"<^<ClassInterface>^>\"); \n\
+<^<JSONExportedMethods>^> \n\
+      cJSON_AddItemToObject(root, \"methods\", methodsRoot); \n\
  \n\
       // setup CURL \n\
       curl_easy_setopt(repoLink, CURLOPT_ERRORBUFFER, errBuff); \n\
@@ -201,7 +205,7 @@ void RCOSCreator::composeSource() {
 
   // fill in ClassName, ClassInterface and virtual function declarations
   mSContent = boost::regex_replace(mSContent, boost::regex("<\\^<ObjectRegisterName>\\^>"), mServerClassName);
-  mSContent = boost::regex_replace(mSContent, boost::regex("<\\^<ClassInterface>\\^>"), getPostedInterface());//mHProcessedContent);
+  mSContent = boost::regex_replace(mSContent, boost::regex("<\\^<JSONExportedMethods>\\^>"), getJPostedInterface("methodsRoot", "currentMethod", "currentArgList"));
 
   // add methods and method calls
   mSContent = boost::regex_replace(mSContent, boost::regex("<\\^<VirtualHostedFunctionDeclarations>\\^>"), getVirtualClientFctDeclarations());
@@ -225,16 +229,16 @@ std::string RCOSCreator::getVirtualClientFctDeclarations() {
   std::string formattedClientFcts = "";
 
   for(RCOSMethod met : mServerMethods)
-    formattedClientFcts += met.getCompleteDeclaration() + std::string("\\n");
+    formattedClientFcts += met.getPureVirtualDeclaration() + std::string("\\n");
 
   return formattedClientFcts;
 }
 
-std::string RCOSCreator::getPostedInterface() {
+std::string RCOSCreator::getJPostedInterface(const std::string &jRoot, const std::string &jMethodHolder, const std::string &jArgListHolder) {
   std::string clientInterface = "";
 
   for(RCOSMethod met : mServerMethods)
-    clientInterface += met.getSimpleDeclaration() + std::string(";\\\\\n");
+    clientInterface += met.getJSONIntegrationInstructions(jRoot, jMethodHolder, jArgListHolder) + std::string("\\n");
 
   return clientInterface;
 }
