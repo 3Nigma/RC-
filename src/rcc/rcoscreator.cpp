@@ -14,8 +14,9 @@ class RCObjectServer { \n\
 public: \n\
   RCObjectServer() = default; \n\
  \n\
- // region dedicated to hosting virtual function client declarations \n\
+// ### Virtual exported object methods Region ### \n\
 <^<VirtualHostedFunctionDeclarations>^>\n\
+// ### END OF REGION ### \n\
  \n\
   void RegisterObject(const std::string &serverAddress, unsigned int localObjectPort, const std::string &serverObjName = \"\", const std::string &localServer = \"\") { \n\
     if(!sendRegistrationRequest(serverAddress, localObjectPort, serverObjName, localServer)) { \n\
@@ -117,7 +118,11 @@ protected: \n\
       mListenPort = localObjectPort; \n\
       cJSON_AddStringToObject(root, \"serverip\", localServer.c_str()); \n\
       cJSON_AddNumberToObject(root, \"serverport\", localObjectPort); \n\
+ \n\
+// ### JSON Method Export Region ### \n\
 <^<JSONExportedMethods>^> \n\
+// ### END OF REGION ### \n\
+\n\
       cJSON_AddItemToObject(root, \"methods\", methodsRoot); \n\
  \n\
       // setup CURL \n\
@@ -163,25 +168,12 @@ bool RCOSCreator::parseCode() {
   }
 
   // get methods
-  boost::regex methExpr("USERCC +(([\\w:]+) +(\\w+) *\\(([\\w, :]+)\\)) *;");
+  boost::regex methExpr("USERCC *([\\w, :\\)\\(]+) *;");
   boost::sregex_iterator m1(mRawFileContent.begin(), mRawFileContent.end(), methExpr);
   boost::sregex_iterator m2;
   std::for_each(m1, m2, [&](const boost::smatch &m) -> bool{
-    // (1) complete function declaration, (2) = return value, (3) = method name, (4) = method argument comma separated list
-    std::cout << "RCC : New method : return type '" << m[2] << "', name '" << m[3] << "' and arguments : "; 
-    RCOSMethod newMet(m[2], m[3], m[1]);
-    std::string argList = m[4];
-
-    // get method arguments
-    boost::regex argExpr("((?:unsigned +)?int|(?:std::)?string|double|bool|void)");
-    boost::sregex_iterator m3(argList.begin(), argList.end(), argExpr);
-    boost::sregex_iterator m4;
-    std::for_each(m3, m4, [&](const boost::smatch &ma) -> bool{
-      std::cout << ma[1] << " ";
-      newMet.pushArgument(ma[1]);
-    });
-    std::cout << std::endl;
-
+    // (1) complete function declaration
+    RCOSMethod newMet(m[1]);
     mServerMethods.push_back(newMet);
   });
 
