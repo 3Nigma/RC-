@@ -11,6 +11,7 @@ CXXFLAGS := -std=c++0x -I$(3RDPDIR)
 $(3RDPDIR)/cJSON/cjson.o
 OBJS := methodinterface.o \
 rcosmethod.o \
+rcocmethod.o \
 rcosinterface.o \
 rcoscreator.o \
 rcosrefurbisher.o

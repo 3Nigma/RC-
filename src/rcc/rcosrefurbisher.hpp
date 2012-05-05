@@ -1,10 +1,12 @@
 #ifndef _RCOSREFURBISHER_HPP_
 #define _RCOSREFURBISHER_HPP_
 
-#include "rcosinterface.hpp"
 #include <boost/regex.hpp>
 #include <cJSON/cJSON.h>
 #include <curl/curl.h> 
+
+#include "rcosinterface.hpp"
+#include "rcocmethod.hpp"
 
 class RCOSRefurbisher : public RCOSInterface {
 public:
@@ -13,10 +15,12 @@ public:
   virtual bool parseCode();
   virtual void composeSource();
 
-  void setRemoteHeaderContent(const std::string &data);
+  void storeJSONMethodNode(cJSON *methRoot);
 protected:
   std::string mNamingServiceAddress;
-  std::string mRawRemoteHeaderContent;
+  std::list<RCOCMethod> mServerMethods;
+
+  std::string getServerMethodsCode();
 };
 
 #endif

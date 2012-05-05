@@ -9,9 +9,9 @@ const std::string rcocClassTemplate = "// RemoteC++Compiler generated file. Plea
  \n\
 class <^<ServerObjectName>^> { \n\
 public: \n\
- // region dedicated to hosting virtual function client declarations \n\
- // <^<  >^> \n\
- \n\
+ // ### Region Hosting Invocation of Server-Side methods ### \n\
+<^<RemoteObjectInvocationCode>^> \n\
+ // ### END OF REGION ###\n\
   static <^<ServerObjectName>^> *getInstance(const std::string &serverAddress) { \n\
     char errBuff[4096]; \n\
     char completeObjAddress[1024]; \n\
@@ -21,7 +21,7 @@ public: \n\
     if((repoLink = curl_easy_init()) != nullptr) { \n\
       // setup CURL \n\
       curl_easy_setopt(repoLink, CURLOPT_ERRORBUFFER, errBuff); \n\
-      curl_easy_setopt(repoLink, CURLOPT_URL, (serverAddress + \"/\" + \"<^<ServerObjectName>^>\").c_str()); \n \
+      curl_easy_setopt(repoLink, CURLOPT_URL, (serverAddress + \"/<^<ServerObjectName>^>\").c_str()); \n \
       curl_easy_setopt(repoLink, CURLOPT_WRITEFUNCTION, repoReply); \n\
       curl_easy_setopt(repoLink, CURLOPT_WRITEDATA, completeObjAddress); \n\
  \n\
@@ -60,7 +60,6 @@ protected: \n\
       if(nullptr != objIp && nullptr != objPort) { \n\
         sprintf(buff, \"%s:%d\", objIp->valuestring, objPort->valueint); \n\
         strcpy(formattedObjAddress, buff); \n\
-        //std::cout << \"CRep replied : \" << objStatus->valuestring << std::endl; \n \
       } \n\
     } \n\
     cJSON_Delete(root); \n\
@@ -76,22 +75,30 @@ RCOSRefurbisher::RCOSRefurbisher(const std::string &codeFile)
 
 }
 
-void RCOSRefurbisher::setRemoteHeaderContent(const std::string &data) {
-  mRawRemoteHeaderContent = data;
-  std::cout << data << std::endl;
+void RCOSRefurbisher::storeJSONMethodNode(cJSON *methRoot) {
+  RCOCMethod newMethod(methRoot);
+
+  mServerMethods.push_back(newMethod);
 }
 
 static size_t repoReply(void *ptr, size_t elSize, size_t elCount, void *userdata) {
   std::string reply = (char *)ptr;
   RCOSRefurbisher *parent = (RCOSRefurbisher *)userdata;
   cJSON *root = nullptr;
-  cJSON *hElement = nullptr;
+  cJSON *mElement = nullptr;
+  cJSON *methodNode = nullptr;
+  unsigned int methCount = 0;
+  unsigned int methId = 0;
 
   if(nullptr != parent) {
     root = cJSON_Parse(reply.c_str());
-    hElement = cJSON_GetObjectItem(root, "interface");
-    if(nullptr != hElement) {
-      parent->setRemoteHeaderContent(hElement->valuestring);
+    mElement = cJSON_GetObjectItem(root, "methods");
+    if(nullptr != mElement) {
+      methCount = cJSON_GetArraySize(mElement);
+      for(methId = 0; methId < methCount; ++methId) {
+	methodNode = cJSON_GetArrayItem(mElement, methId);
+	parent->storeJSONMethodNode(methodNode);
+      }
     }
     cJSON_Delete(root);
 
@@ -121,7 +128,7 @@ bool RCOSRefurbisher::parseCode() {
     }
 
     // get naming service address
-    boost::regex nsExpr(mServerClassName + " *\\. *getInstance\\( *\"([\\w:\\.]+)\" *\\)");
+    boost::regex nsExpr(mServerClassName + " *:: *getInstance\\( *\"([\\w:\\.]+)\" *\\)");
     boost::match_results<std::string::const_iterator> nsCaptures;
     
     if(boost::regex_search(mRawFileContent, nsCaptures, nsExpr, boost::match_default)){
@@ -132,7 +139,7 @@ bool RCOSRefurbisher::parseCode() {
       return false;
     }
     
-    // aquire header info
+    // aquire object info
     curl_easy_setopt(repoLink, CURLOPT_ERRORBUFFER, errBuff);
     curl_easy_setopt(repoLink, CURLOPT_URL, (mNamingServiceAddress + "/" + mServerClassName + "/interface").c_str());
     curl_easy_setopt(repoLink, CURLOPT_WRITEFUNCTION, repoReply);
@@ -143,9 +150,9 @@ bool RCOSRefurbisher::parseCode() {
       return false;
     }
 
-    
+    //
 
-    // clean it up!
+    // clean up naming service link
     curl_easy_cleanup(repoLink);
     
     return true;
@@ -154,9 +161,19 @@ bool RCOSRefurbisher::parseCode() {
   return false;
 }
 
+std::string RCOSRefurbisher::getServerMethodsCode() {
+  std::string methodsCode;
+
+  for(RCOCMethod meth : mServerMethods)
+    methodsCode += meth.getInvocationCode() + std::string("\\n");
+
+  return methodsCode;
+}
+
 void RCOSRefurbisher::composeSource() {
   mSContent = rcocClassTemplate;
 
   // fill in the data on the template
   mSContent = boost::regex_replace(mSContent, boost::regex("<\\^<ServerObjectName>\\^>"), mServerClassName);
+  mSContent = boost::regex_replace(mSContent, boost::regex("<\\^<RemoteObjectInvocationCode>\\^>"), getServerMethodsCode());
 }

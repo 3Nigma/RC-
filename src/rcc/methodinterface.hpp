@@ -4,10 +4,18 @@
 #include <iostream>
 #include <boost/regex.hpp>
 
+#include "cJSON/cJSON.h"
+
 enum ImplementedType {UNKNOWN, STRING, INTEGER, DOUBLE, BOOLEAN, VOID};
+
+typedef struct {
+  ImplementedType en;
+  std::string st;
+} VarType;
 
 class MethodInterface {
 public:
+  MethodInterface(cJSON *methNode);
   MethodInterface(const std::string &completeFct);
 
   std::string getJSONIntegrationInstructions(const std::string &jRoot, const std::string &jMethodHolder, const std::string &jArgListHolder);
@@ -16,13 +24,13 @@ public:
 
   void pushArgument(const std::string &argType);
 protected:
-  ImplementedType mReturnType;
+  VarType mReturnType;
   std::string mName;
   std::string mCompleteFunctionDeclaration;
-  std::vector<ImplementedType> mArgTypes;
+  std::vector<VarType> mArgTypes;
 
-  ImplementedType parseTypeFromString(const std::string &type);
-  std::string parseStringFromType(ImplementedType type);
+  VarType getTypeFromString(const std::string &typ);
+  std::string getStringFromType(VarType typ);
 };
 
 #endif

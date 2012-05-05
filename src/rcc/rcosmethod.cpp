@@ -15,7 +15,7 @@ std::string RCOSMethod::getFormattedCallCode() {
   std::string methodCall = "";
 
   callCode = boost::regex_replace(rcosMethodTemplate, boost::regex("<\\^<LocalMethodName>\\^>"), mName);
-  switch(mReturnType) {
+  switch(mReturnType.en) {
   case VOID:
   case STRING:
     callCode = boost::regex_replace(callCode, boost::regex("<\\^<cJSON_LocalMethodReturnType>\\^>"), "String");
@@ -34,8 +34,8 @@ std::string RCOSMethod::getFormattedCallCode() {
   // fill in the method and result
   int argIndex = 0;
   methodCall += std::string("rcos->") + mName + std::string("(");
-  for(ImplementedType argType : mArgTypes) {
-    switch(argType) {
+  for(VarType argType : mArgTypes) {
+    switch(argType.en) {
     case STRING:
       methodCall += "std::string(cJSON_GetObjectItem(root, \"argument" + std::to_string(argIndex) + "\")->valuestring)";
       break;
@@ -56,9 +56,9 @@ std::string RCOSMethod::getFormattedCallCode() {
     argIndex ++;
   }
   methodCall += std::string(")");
-  if(mReturnType == STRING) methodCall += std::string(".c_str()");
+  if(mReturnType.en == STRING) methodCall += std::string(".c_str()");
 
-  if(mReturnType == VOID) {
+  if(mReturnType.en == VOID) {
     callCode = boost::regex_replace(callCode, boost::regex("<\\^<OtherOps>\\^>"), methodCall);
     callCode = boost::regex_replace(callCode, boost::regex("<\\^<LocalFunctionCallResult>\\^>"), "(void) No return");
   } else {
