@@ -4,9 +4,8 @@ RCOSInterface::RCOSInterface(const std::string &codeFile) {
   std::ifstream fCode(codeFile.c_str());
 
   if(fCode.good()) {
-    mHRawContent.assign(std::istreambuf_iterator<char>(fCode), std::istreambuf_iterator<char>());
-    std::cout << "Raw header content : " << std::endl
-              << mHRawContent << std::endl;
+    mRawFileContent.assign(std::istreambuf_iterator<char>(fCode), std::istreambuf_iterator<char>());
+    std::cout << "Input file content : " << std::endl << mRawFileContent << std::endl;
   } else
     std::cerr << "Unable to open header file '" << codeFile << "'!" << std::endl;
 

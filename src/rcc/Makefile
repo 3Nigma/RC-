@@ -15,7 +15,7 @@ rcoscreator.o \
 rcosrefurbisher.o
 
 %.o : %.cpp
-	$(CC) -c $(CXXFLAGS) -o $@ $< 
+	$(CC) -c $(CXXFLAGS) -o $@ $<
 
 all: $(OBJS)
 	$(CXX) $(CXXFLAGS) $(3RDPOBJS) $(OBJS) main.cpp -o $(BINDIR)/$(PROJ) $(LDFLAGS)

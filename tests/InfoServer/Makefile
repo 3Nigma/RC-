@@ -9,7 +9,7 @@ LDFLAGS := -g -pthread -ldl -lm -lcurl -lboost_regex
 CXXFLAGS := -std=c++0x -I$(3RDPDIR)
 3RDPOBJS := $(3RDPDIR)/mongoose/mongoose.o \
 $(3RDPDIR)/cJSON/cjson.o
-OBJS := rcos_infoserver.o \
+OBJS := rcos_InfoServer.o \
 infoserver.o
 
 %.o : %.cpp

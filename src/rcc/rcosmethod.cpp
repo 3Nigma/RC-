@@ -10,8 +10,12 @@ RCOSMethod::RCOSMethod(const std::string &retType, const std::string &name, cons
   mReturnType = parseTypeFromString(retType);
 }
 
+std::string RCOSMethod::getSimpleDeclaration() {
+  return mCompleteFunctionDeclaration;
+}
+
 std::string RCOSMethod::getCompleteDeclaration() {
-  return std::string("virtual ") + mCompleteFunctionDeclaration + std::string(" = 0;");
+  return std::string("virtual ") + getSimpleDeclaration() + std::string(" = 0;");
 }
 
 std::string RCOSMethod::getFormattedCallCode() {

@@ -20,6 +20,7 @@ private:
 
   std::string getClientWebCallCode();
   std::string getVirtualClientFctDeclarations();
+  std::string getPostedInterface();
 };
 
 #endif

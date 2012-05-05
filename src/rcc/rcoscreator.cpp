@@ -149,7 +149,7 @@ bool RCOSCreator::parseCode() {
   boost::regex clasExpr("class +(\\w+) *: *public +RCObjectServer");
   boost::match_results<std::string::const_iterator> captures;
 
-  if(boost::regex_search(mHRawContent, captures, clasExpr, boost::match_default)){
+  if(boost::regex_search(mRawFileContent, captures, clasExpr, boost::match_default)){
     // (1) = ClassName
     mServerClassName = captures[1];
     std::cout << "RCC : Class name aquired '" << mServerClassName << "'" << std::endl;
@@ -160,7 +160,7 @@ bool RCOSCreator::parseCode() {
 
   // get methods
   boost::regex methExpr("USERCC +(([\\w:]+) +(\\w+) *\\(([\\w, :]+)\\)) *;");
-  boost::sregex_iterator m1(mHRawContent.begin(), mHRawContent.end(), methExpr);
+  boost::sregex_iterator m1(mRawFileContent.begin(), mRawFileContent.end(), methExpr);
   boost::sregex_iterator m2;
   std::for_each(m1, m2, [&](const boost::smatch &m) -> bool{
     // (1) complete function declaration, (2) = return value, (3) = method name, (4) = method argument comma separated list
@@ -182,14 +182,14 @@ bool RCOSCreator::parseCode() {
   });
 
   // clean header
-  mHProcessedContent = boost::regex_replace(mHRawContent, boost::regex("USERCC "), "");
-  mHProcessedContent = boost::regex_replace(mHProcessedContent, boost::regex(std::string("#include +\"")+ getFileSaveName() + std::string("\"")), "");
-  mHProcessedContent = boost::regex_replace(mHProcessedContent, boost::regex("[:]? *public +RCObjectServer *"), "");
-  mHProcessedContent = boost::regex_replace(mHProcessedContent, boost::regex("\\n\\n"), "\\n");
+   mHProcessedContent = boost::regex_replace(mRawFileContent, boost::regex("USERCC "), "");
+   mHProcessedContent = boost::regex_replace(mHProcessedContent, boost::regex(std::string("#include +\"")+ getFileSaveName() + std::string("\"")), "");
+   mHProcessedContent = boost::regex_replace(mHProcessedContent, boost::regex("[:]? *public +RCObjectServer *"), "");
+   mHProcessedContent = boost::regex_replace(mHProcessedContent, boost::regex("\\n\\n"), "\\n");
   // format header
-  mHProcessedContent = boost::regex_replace(mHProcessedContent, boost::regex("\""), "\\\\\\\\\"");
-  mHProcessedContent = boost::regex_replace(mHProcessedContent, boost::regex("\\n"), "\\\\\\\\n\\\\\\\\\\n");
-
+   mHProcessedContent = boost::regex_replace(mHProcessedContent, boost::regex("\""), "\\\\\\\\\"");
+   mHProcessedContent = boost::regex_replace(mHProcessedContent, boost::regex("\\n"), "\\\\\\\\n\\\\\\\\\\n");
+  // mHProcessedContent = getClientWebCallCode();
   std::cout << "Cleaned and formatted header :" << std::endl
             << mHProcessedContent << std::endl;
 
@@ -201,7 +201,7 @@ void RCOSCreator::composeSource() {
 
   // fill in ClassName, ClassInterface and virtual function declarations
   mSContent = boost::regex_replace(mSContent, boost::regex("<\\^<ObjectRegisterName>\\^>"), mServerClassName);
-  mSContent = boost::regex_replace(mSContent, boost::regex("<\\^<ClassInterface>\\^>"), mHProcessedContent);
+  mSContent = boost::regex_replace(mSContent, boost::regex("<\\^<ClassInterface>\\^>"), getPostedInterface());//mHProcessedContent);
 
   // add methods and method calls
   mSContent = boost::regex_replace(mSContent, boost::regex("<\\^<VirtualHostedFunctionDeclarations>\\^>"), getVirtualClientFctDeclarations());
@@ -228,4 +228,13 @@ std::string RCOSCreator::getVirtualClientFctDeclarations() {
     formattedClientFcts += met.getCompleteDeclaration() + std::string("\\n");
 
   return formattedClientFcts;
+}
+
+std::string RCOSCreator::getPostedInterface() {
+  std::string clientInterface = "";
+
+  for(RCOSMethod met : mServerMethods)
+    clientInterface += met.getSimpleDeclaration() + std::string("\\\\n\\\\\n");
+
+  return clientInterface;
 }

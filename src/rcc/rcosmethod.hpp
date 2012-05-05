@@ -11,6 +11,7 @@ class RCOSMethod {
 public:
   RCOSMethod(const std::string &retType, const std::string &name, const std::string &function);
 
+  std::string getSimpleDeclaration();
   std::string getCompleteDeclaration();
   std::string getFormattedCallCode();
 

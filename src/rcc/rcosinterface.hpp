@@ -16,7 +16,7 @@ public :
 protected :
   std::string mSContent;
   std::string mServerClassName;
-  std::string mHRawContent;
+  std::string mRawFileContent;
   std::string mHProcessedContent;
 private:
 };
