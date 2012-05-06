@@ -37,7 +37,7 @@ std::string RCOSMethod::getFormattedCallCode() {
   for(VarType argType : mArgTypes) {
     switch(argType.en) {
     case STRING:
-      methodCall += "std::string(cJSON_GetObjectItem(root, \"argument" + std::to_string(argIndex) + "\")->valuestring)";
+      methodCall += "std::string(cJSON_GetObjectItem(root, \"arg" + std::to_string(argIndex) + "\")->valuestring)";
       break;
     case INTEGER:
       methodCall += "cJSON_GetObjectItem(root, \"argument" + std::to_string(argIndex) + "\")->valueint";
