@@ -9,9 +9,9 @@ const std::string rcocClassTemplate = "// RemoteC++Compiler generated file. Plea
  \n\
 class <^<ServerObjectName>^> { \n\
 public: \n\
- // ### Region Hosting Invocation of Server-Side methods ### \n\
+// ### Region Hosting Invocation of Server-Side methods ### \n\
 <^<RemoteObjectInvocationCode>^> \n\
- // ### END OF REGION ###\n\
+// ### END OF REGION ###\n\
   static <^<ServerObjectName>^> *getInstance(const std::string &serverAddress) { \n\
     char errBuff[4096]; \n\
     char completeObjAddress[1024]; \n\
@@ -26,12 +26,12 @@ public: \n\
       curl_easy_setopt(repoLink, CURLOPT_WRITEDATA, completeObjAddress); \n\
  \n\
       if(curl_easy_perform(repoLink) != 0) { \n\
+        curl_easy_cleanup(repoLink); \n\
         std::cerr << \"Unable to aquire object address! : \" << errBuff << std::endl; \n\
         return false; \n\
-      } else \n\
-        std::cout << \"'<^<ServerObjectName>^>' found at \" << completeObjAddress << std::endl; \n\
+      } \n\
  \n\
-      // clean it up! \n\
+      // clean up \n\
       curl_easy_cleanup(repoLink); \n\
     } else { \n\
       return nullptr; \n\
@@ -67,6 +67,14 @@ protected: \n\
     return elCount; \n\
   } \n\
  \n\
+  static size_t objReply(void *ptr, size_t elSize, size_t elCount, void *userdata) { \n\
+    if(nullptr != userdata) \n\
+      strcpy((char *)userdata, (char *)ptr); \n\
+    else \n\
+      return 0; \n\
+  \n\
+    return elCount; \n\
+  } \n\
 };";
 
 
@@ -165,7 +173,7 @@ std::string RCOSRefurbisher::getServerMethodsCode() {
   std::string methodsCode;
 
   for(RCOCMethod meth : mServerMethods)
-    methodsCode += meth.getInvocationCode() + std::string("\\n");
+    methodsCode += meth.getInvocationCode("mObjAddr","objReply") + std::string("\\n");
 
   return methodsCode;
 }

@@ -7,7 +7,7 @@ class RCOCMethod : public MethodInterface {
 public:
   RCOCMethod(cJSON *methNode);
 
-  std::string getInvocationCode();
+  std::string getInvocationCode(const std::string &objServerAddress, const std::string &localObjCallback);
 };
 
 #endif

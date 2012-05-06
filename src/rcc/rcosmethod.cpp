@@ -40,10 +40,10 @@ std::string RCOSMethod::getFormattedCallCode() {
       methodCall += "std::string(cJSON_GetObjectItem(root, \"arg" + std::to_string(argIndex) + "\")->valuestring)";
       break;
     case INTEGER:
-      methodCall += "cJSON_GetObjectItem(root, \"argument" + std::to_string(argIndex) + "\")->valueint";
+      methodCall += "cJSON_GetObjectItem(root, \"arg" + std::to_string(argIndex) + "\")->valueint";
       break;
     case DOUBLE:
-      methodCall += "cJSON_GetObjectItem(root, \"argument" + std::to_string(argIndex) + "\")->valuedouble";
+      methodCall += "cJSON_GetObjectItem(root, \"arg" + std::to_string(argIndex) + "\")->valuedouble";
       break;
     case BOOLEAN:
       //TODO : Implement this
