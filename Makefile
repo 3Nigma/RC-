@@ -21,4 +21,5 @@ tests:
 clean:
 	cd 3rdp; make clean
 	cd src/crep; make clean
+	cd tests; make clean
 	cd bin; rm -f *

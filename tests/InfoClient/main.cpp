@@ -1,4 +1,4 @@
-#include <cstdio>
+#include <iostream>
 #include "rcos_InfoServer.cpp"
 
 int main(int argc, char *argv[]) {

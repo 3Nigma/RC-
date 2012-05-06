@@ -21,4 +21,4 @@ rcos : main.cpp
 	$(BINDIR)/rcc -c ./main.cpp .
 
 clean:
-	rm -f $(BINDIR)/$(PROJ) $(OBJS)
+	rm -f $(PROJ) $(OBJS) *~ rcos_*

@@ -1,4 +1,4 @@
-PROJ := infoserver
+PROJ := mathserver
 
 CC := gcc
 CXX := g++
@@ -9,8 +9,8 @@ LDFLAGS := -g -pthread -ldl -lm -lcurl -lboost_regex
 CXXFLAGS := -std=c++0x -I$(3RDPDIR)
 3RDPOBJS := $(3RDPDIR)/mongoose/mongoose.o \
 $(3RDPDIR)/cJSON/cjson.o
-OBJS := rcos_InfoServer.o \
-infoserver.o
+OBJS := rcos_MathServer.o \
+mathserver.o
 
 %.o : %.cpp
 	$(CC) -c $(CXXFLAGS) -o $@ $< 
@@ -18,8 +18,8 @@ infoserver.o
 all : rcos $(OBJS)
 	$(CXX) $(CXXFLAGS) $(3RDPOBJS) $(OBJS) main.cpp -o $(PROJ) $(LDFLAGS)
 
-rcos : infoserver.hpp
-	$(BINDIR)/rcc -s ./infoserver.hpp .
+rcos : mathserver.hpp
+	$(BINDIR)/rcc -s ./mathserver.hpp .
 
 clean:
 	rm -f $(PROJ) $(OBJS) *~ rcos_*
